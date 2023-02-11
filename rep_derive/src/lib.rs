@@ -7,7 +7,7 @@ use syn::spanned::Spanned;
 use syn::Block;
 use syn::{
     parse_macro_input, Data, DeriveInput, Error, Fields, FnArg, ImplItem, ImplItemMethod, ItemImpl,
-    Lit, Meta, NestedMeta, Stmt, Visibility,
+    Lit, Meta, NestedMeta, Visibility,
 };
 
 /// A macro for deriving an implementation of `CheckRep`
@@ -433,45 +433,27 @@ fn wrap_checks(block: Block, prepend: bool, append: bool) -> Block {
         stmts,
     } = block;
 
-    let mut new_stmts = vec![];
-    if prepend {
-        new_stmts.push(
-            syn::parse::<Stmt>(
-                quote! {
-                    self.check_rep();
-                }
-                .into(),
-            )
-            .unwrap(),
-        );
-    }
-    new_stmts.push(
-        syn::parse::<Stmt>(
+    let check_rep_quote = |some| {
+        if some {
             quote! {
-                let __result = (|| {
-                    #(#stmts)*
-                })();
+                self.check_rep();
             }
-            .into(),
-        )
-        .unwrap(),
-    );
-    if append {
-        new_stmts.push(
-            syn::parse::<Stmt>(
-                quote! {
-                    self.check_rep();
-                }
-                .into(),
-            )
-            .unwrap(),
-        );
-    }
+        } else {
+            quote! {}
+        }
+    };
+
+    let prepend = check_rep_quote(prepend);
+    let append = check_rep_quote(append);
 
     let new_block = syn::parse::<Block>(
         quote! {
             {
-                #(#new_stmts)*
+                #prepend
+                let __result = (|| {
+                    #(#stmts)*
+                })();
+                #append
                 __result
             }
         }
