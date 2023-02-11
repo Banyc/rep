@@ -445,9 +445,9 @@ fn wrap_checks(block: Block, prepend: bool, append: bool) -> Block {
     new_stmts.push(
         syn::parse::<Stmt>(
             quote! {
-                let __result = || {
+                let __result = (|| {
                     #(#stmts)*
-                }();
+                })();
             }
             .into(),
         )
