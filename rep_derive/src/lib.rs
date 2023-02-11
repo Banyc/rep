@@ -110,18 +110,19 @@ pub fn check_rep(
 ) -> proc_macro::TokenStream {
     if let Ok(impl_block) = syn::parse::<ItemImpl>(item.clone()) {
         match wrap_checks_in_impl(impl_block, true, true, true) {
-            Ok(impl_block) => impl_block.to_token_stream().into(),
-            Err(e) => e.to_compile_error().into(),
+            Ok(impl_block) => impl_block.to_token_stream(),
+            Err(e) => e.to_compile_error(),
         }
     } else if let Ok(method) = syn::parse::<ImplItemMethod>(item) {
         // insert calls to check rep at start and end of method
         match wrap_checks_in_method(method, true, true, true) {
-            Ok(method) => method.to_token_stream().into(),
-            Err(e) => e.to_compile_error().into(),
+            Ok(method) => method.to_token_stream(),
+            Err(e) => e.to_compile_error(),
         }
     } else {
-        error_quote("expected impl block or method").into()
+        error_quote("expected impl block or method")
     }
+    .into()
 }
 
 /// A macro that inserts a call to `check_rep` at the start of given method
@@ -132,18 +133,19 @@ pub fn require_rep(
 ) -> proc_macro::TokenStream {
     if let Ok(impl_block) = syn::parse::<ItemImpl>(item.clone()) {
         match wrap_checks_in_impl(impl_block, true, false, false) {
-            Ok(impl_block) => impl_block.to_token_stream().into(),
-            Err(e) => e.to_compile_error().into(),
+            Ok(impl_block) => impl_block.to_token_stream(),
+            Err(e) => e.to_compile_error(),
         }
     } else if let Ok(method) = syn::parse::<ImplItemMethod>(item) {
         // insert calls to check rep at start of method
         match wrap_checks_in_method(method, true, false, false) {
-            Ok(method) => method.to_token_stream().into(),
-            Err(e) => e.to_compile_error().into(),
+            Ok(method) => method.to_token_stream(),
+            Err(e) => e.to_compile_error(),
         }
     } else {
-        error_quote("expected method").into()
+        error_quote("expected method")
     }
+    .into()
 }
 
 /// A macro that inserts a call to `check_rep` at the end of given method
@@ -154,16 +156,17 @@ pub fn ensure_rep(
 ) -> proc_macro::TokenStream {
     if let Ok(impl_block) = syn::parse::<ItemImpl>(item.clone()) {
         match wrap_checks_in_impl(impl_block, false, true, true) {
-            Ok(impl_block) => impl_block.to_token_stream().into(),
-            Err(e) => e.to_compile_error().into(),
+            Ok(impl_block) => impl_block.to_token_stream(),
+            Err(e) => e.to_compile_error(),
         }
     } else if let Ok(method) = syn::parse::<ImplItemMethod>(item) {
         // insert calls to check rep at end of method
         match wrap_checks_in_method(method, false, true, true) {
-            Ok(method) => method.to_token_stream().into(),
-            Err(e) => e.to_compile_error().into(),
+            Ok(method) => method.to_token_stream(),
+            Err(e) => e.to_compile_error(),
         }
     } else {
-        error_quote("expected method").into()
+        error_quote("expected method")
     }
+    .into()
 }
