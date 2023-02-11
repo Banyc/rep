@@ -236,7 +236,7 @@ pub fn derive_check_indie_fields(input: proc_macro::TokenStream) -> proc_macro::
                 fn check_indie_fields(&self, e: &mut RepErrors) {
                     #( if ! #checks { e.add( #check_errors ); } )*
                     #(
-                        let recursed = self. #fields_to_recurse_on .check_indie_fields(e);
+                        self. #fields_to_recurse_on .check_indie_fields(e);
                     )*
                 }
             }
