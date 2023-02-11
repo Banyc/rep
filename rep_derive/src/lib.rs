@@ -4,10 +4,10 @@ use proc_macro2::Span;
 use quote::quote;
 use quote::ToTokens;
 use syn::spanned::Spanned;
+use syn::Block;
 use syn::{
-	ItemImpl, ImplItem, Stmt, Meta, FnArg, Error,
-    parse_macro_input, Data, DeriveInput, Fields, NestedMeta, Visibility,
-    ImplItemMethod, Lit
+    parse_macro_input, Data, DeriveInput, Error, Fields, FnArg, ImplItem, ImplItemMethod, ItemImpl,
+    Lit, Meta, NestedMeta, Stmt, Visibility,
 };
 
 /// A macro for deriving an implementation of `CheckRep`
@@ -39,7 +39,7 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     if let Data::Struct(data_struct) = data {
         let fields = data_struct.fields;
         let mut fields_contents = None;
-    	if let Fields::Named(fields_named) = fields {
+        if let Fields::Named(fields_named) = fields {
             fields_contents = Some(fields_named.named);
         // } else if let Fields::Unnamed(fields_unnamed) = fields {
         //     fields_contents = Some(fields_unnamed.unnamed);
@@ -47,21 +47,21 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
             errors.push(Error::new(fields.span(), "expected named fields").to_compile_error());
         }
 
-		for (_, field) in fields_contents.unwrap().iter().enumerate() {
-			for attr in field.attrs.clone() {
-				let maybe_meta = attr.parse_meta();
+        for (_, field) in fields_contents.unwrap().iter().enumerate() {
+            for attr in field.attrs.clone() {
+                let maybe_meta = attr.parse_meta();
 
-				if let Ok(meta) = maybe_meta {
-					if let Meta::List(meta_list) = meta {
-						if meta_list.path.is_ident("rep") {
-							if meta_list.nested.len() == 1 {
-								let nested = meta_list.nested.first().unwrap();
+                if let Ok(meta) = maybe_meta {
+                    if let Meta::List(meta_list) = meta {
+                        if meta_list.path.is_ident("rep") {
+                            if meta_list.nested.len() == 1 {
+                                let nested = meta_list.nested.first().unwrap();
 
                                 // #[rep] comes in 2 varieties
                                 // 1. literals like #[rep(eq ="my_func")]
                                 // 2. paths like #[rep(always_true)]
                                 if let NestedMeta::Meta(nested_meta) = nested {
-                                    let field_name = field.ident.clone().unwrap();//_or(Ident::new(&i.to_string(), Span::call_site()));
+                                    let field_name = field.ident.clone().unwrap(); //_or(Ident::new(&i.to_string(), Span::call_site()));
                                     let field_name_name = field.ident.clone().unwrap().to_string();
                                     let field_type = field.ty.clone();
                                     match nested_meta {
@@ -99,7 +99,13 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                                                     format!("self.{} must be false", #field_name_name)
                                                 });
                                             } else {
-                                                errors.push(Error::new(p.span(), "unsupported representation invariant").to_compile_error());
+                                                errors.push(
+                                                    Error::new(
+                                                        p.span(),
+                                                        "unsupported representation invariant",
+                                                    )
+                                                    .to_compile_error(),
+                                                );
                                             }
                                         }
                                         Meta::NameValue(v) => {
@@ -175,35 +181,52 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                                                         });
                                                         check_errors.push(quote! {
                                                             format!("{}(self.{}) must be true when self.{} == {}", #fn_name, #field_name_name, #field_name_name, self.#field_name)
-                                                        });   
+                                                        });
                                                     } else {
                                                         errors.push(Error::new(val.span(), "assert_with can only be used with the name of a function to call").to_compile_error());
                                                     }
                                                 } else {
-                                                    errors.push(Error::new(val.span(), "assert_with can only be used with the name of a function to call").to_compile_error());    
+                                                    errors.push(Error::new(val.span(), "assert_with can only be used with the name of a function to call").to_compile_error());
                                                 }
                                             } else {
-                                                errors.push(Error::new(v.span(), "unsupported representation invariant").to_compile_error());
+                                                errors.push(
+                                                    Error::new(
+                                                        v.span(),
+                                                        "unsupported representation invariant",
+                                                    )
+                                                    .to_compile_error(),
+                                                );
                                             }
                                         }
                                         _ => {
-                                            errors.push(Error::new(nested_meta.span(), "unsupported representation invariant").to_compile_error());
+                                            errors.push(
+                                                Error::new(
+                                                    nested_meta.span(),
+                                                    "unsupported representation invariant",
+                                                )
+                                                .to_compile_error(),
+                                            );
                                         }
-
                                     }
                                 } else {
-                                    errors.push(Error::new(nested.span(), "invalid usage of #[rep]").to_compile_error());
+                                    errors.push(
+                                        Error::new(nested.span(), "invalid usage of #[rep]")
+                                            .to_compile_error(),
+                                    );
                                 }
-							} else {
-                                errors.push(Error::new(meta_list.span(), "expected just 1 item").to_compile_error());
-							}
-						}
-					}
-				}
-			}
-		}
+                            } else {
+                                errors.push(
+                                    Error::new(meta_list.span(), "expected just 1 item")
+                                        .to_compile_error(),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
     } else {
-    	errors.push(Error::new(name.span(), "expected name of structure").to_compile_error());
+        errors.push(Error::new(name.span(), "expected name of structure").to_compile_error());
     }
 
     let expanded = if errors.len() > 0 {
@@ -227,7 +250,7 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         #( is_correct = is_correct && self. #fields_to_recurse_on .is_correct() ; )*
                         is_correct
                     }
-                    
+
                     fn correctness(&self) -> Result<(), Vec<String>> {
                         let mut c = vec![];
                         let mut is_error = false;
@@ -235,7 +258,7 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         if c.len() > 0 {
                             is_error = true;
                         }
-                        #( 
+                        #(
                             let recursed = self. #fields_to_recurse_on .correctness();
                             if let Err(mut errors) = recursed {
                                 c.append(&mut errors);
@@ -272,7 +295,7 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         if c.len() > 0 {
                             is_error = true;
                         }
-                        #( 
+                        #(
                             let recursed = self. #fields_to_recurse_on .correctness();
                             if let Err(mut errors) = recursed {
                                 c.append(&mut errors);
@@ -286,7 +309,7 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                         }
                     }
                 }
-            }            
+            }
         }
     };
 
@@ -302,96 +325,156 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 ///
 /// You may also apply it to a method in an `impl` block regardless of the method's signature.
 #[proc_macro_attribute]
-pub fn check_rep(_attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    if let Ok(mut impl_block) = syn::parse::<ItemImpl>(item.clone().into()) {
-        let mut new_impl_block = impl_block.clone();
-        new_impl_block.items = vec![];
-
-        // loop through all items
-        // see if the item is pub, accepts &mut self
-        // if so, insert calls to check rep
-    	for impl_item in &mut impl_block.items {
-    		let mut new_impl_item = impl_item.clone();
-
-    		if let ImplItem::Method(mut impl_item_method) = impl_item.clone() {
-    			let mut new_impl_item_method = impl_item_method.clone();
-
-                if let Visibility::Public(_) = new_impl_item_method.vis {
-                    if new_impl_item_method.sig.inputs.iter().any(|input| {
-                        if let FnArg::Receiver(receiver) = input {
-                            receiver.mutability.is_some()
-                        } else {
-                            false
-                        }
-                    }) {
-                        // insert calls to check rep at start and end of method
-                        impl_item_method.block.stmts.insert(0, syn::parse::<Stmt>(quote! {
-                            self.check_rep();
-                        }.into()).unwrap());
-                        impl_item_method.block.stmts.push(syn::parse::<Stmt>(quote! {
-                            self.check_rep();
-                        }.into()).unwrap());
-
-                        new_impl_item_method.block.stmts = impl_item_method.block.stmts;
-                        new_impl_item = ImplItem::Method(new_impl_item_method); 
-                    }
-                }
-    		}
-
-            new_impl_block.items.push(new_impl_item);
-    	}
-
-    	new_impl_block.to_token_stream().into()
+pub fn check_rep(
+    _attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    if let Ok(impl_block) = syn::parse::<ItemImpl>(item.clone().into()) {
+        check_rep_at_impl(impl_block).to_token_stream().into()
     } else if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.clone().into()) {
         // insert calls to check rep at start and end of method
-        impl_item_method.block.stmts.insert(0, syn::parse::<Stmt>(quote! {
-            self.check_rep();
-        }.into()).unwrap());
-        impl_item_method.block.stmts.push(syn::parse::<Stmt>(quote! {
-            self.check_rep();
-        }.into()).unwrap());
+        impl_item_method.block = wrap_checks(impl_item_method.block, true, true);
+
         impl_item_method.to_token_stream().into()
     } else {
-        let error = Error::new(Span::call_site(), "expected impl block or method").to_compile_error();
+        let error =
+            Error::new(Span::call_site(), "expected impl block or method").to_compile_error();
 
-    	(quote! {
+        (quote! {
             #error
-        }).into()
+        })
+        .into()
     }
+}
+
+fn check_rep_at_impl(impl_block: ItemImpl) -> ItemImpl {
+    let mut new_impl_block = impl_block.clone();
+    new_impl_block.items = vec![];
+
+    // loop through all items
+    // see if the item is pub, accepts &mut self
+    // if so, insert calls to check rep
+    for impl_item in &impl_block.items {
+        let mut new_impl_item = impl_item.clone();
+
+        if let ImplItem::Method(impl_item_method) = impl_item.clone() {
+            let mut new_impl_item_method = impl_item_method.clone();
+
+            if let Visibility::Public(_) = new_impl_item_method.vis {
+                if new_impl_item_method.sig.inputs.iter().any(|input| {
+                    if let FnArg::Receiver(receiver) = input {
+                        receiver.mutability.is_some()
+                    } else {
+                        false
+                    }
+                }) {
+                    // replace the method's body with the new block
+                    new_impl_item_method.block = wrap_checks(impl_item_method.block, true, true);
+
+                    new_impl_item = ImplItem::Method(new_impl_item_method);
+                }
+            }
+        }
+
+        new_impl_block.items.push(new_impl_item);
+    }
+
+    new_impl_block
 }
 
 /// A macro that inserts a call to `check_rep` at the start of given method
 #[proc_macro_attribute]
-pub fn require_rep(_attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.clone().into()) {
-        // insert calls to check rep at start and end of method
-        impl_item_method.block.stmts.insert(0, syn::parse::<Stmt>(quote! {
-            self.check_rep();
-        }.into()).unwrap());
+pub fn require_rep(
+    _attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.into()) {
+        // insert calls to check rep at start of method
+        impl_item_method.block = wrap_checks(impl_item_method.block, true, false);
+
         impl_item_method.to_token_stream().into()
     } else {
         let error = Error::new(Span::call_site(), "expected method").to_compile_error();
 
         (quote! {
             #error
-        }).into()
+        })
+        .into()
     }
 }
 
-/// A macro that inserts a call to `check_rep` at the start of given method
+/// A macro that inserts a call to `check_rep` at the end of given method
 #[proc_macro_attribute]
-pub fn ensure_rep(_attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.clone().into()) {
-        // insert calls to check rep at start and end of method
-        impl_item_method.block.stmts.push(syn::parse::<Stmt>(quote! {
-            self.check_rep();
-        }.into()).unwrap());
+pub fn ensure_rep(
+    _attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.into()) {
+        // insert calls to check rep at end of method
+        impl_item_method.block = wrap_checks(impl_item_method.block, false, true);
+
         impl_item_method.to_token_stream().into()
     } else {
         let error = Error::new(Span::call_site(), "expected method").to_compile_error();
 
         (quote! {
             #error
-        }).into()
+        })
+        .into()
     }
+}
+
+fn wrap_checks(block: Block, prepend: bool, append: bool) -> Block {
+    let Block {
+        brace_token: _,
+        stmts,
+    } = block;
+
+    let mut new_stmts = vec![];
+    if prepend {
+        new_stmts.push(
+            syn::parse::<Stmt>(
+                quote! {
+                    self.check_rep();
+                }
+                .into(),
+            )
+            .unwrap(),
+        );
+    }
+    new_stmts.push(
+        syn::parse::<Stmt>(
+            quote! {
+                let __result = || {
+                    #(#stmts)*
+                }();
+            }
+            .into(),
+        )
+        .unwrap(),
+    );
+    if append {
+        new_stmts.push(
+            syn::parse::<Stmt>(
+                quote! {
+                    self.check_rep();
+                }
+                .into(),
+            )
+            .unwrap(),
+        );
+    }
+
+    let new_block = syn::parse::<Block>(
+        quote! {
+            {
+                #(#new_stmts)*
+                __result
+            }
+        }
+        .into(),
+    )
+    .unwrap();
+
+    new_block
 }
