@@ -5,16 +5,15 @@ fn is_gt_zero(num: i32) -> bool {
     num > 0
 }
 
-#[derive(CheckRep)]
+#[derive(CheckIndieFields)]
 struct Point {
     #[rep(assert_eq = 0)]
     x: i32,
     y: i32,
 }
 
-#[derive(CheckRep)]
+#[derive(CheckIndieFields)]
 struct Line {
-    #[rep(use_custom)]
     // #[rep(assert_default)]
     // #[rep(assert_true)]
     // #[rep(assert_false)]
@@ -34,13 +33,15 @@ struct Line {
     y2: i32,
 }
 
-impl CustomCheckRep for Line {
-    fn collect_errors(&self, e: &mut RepErrors) {
+impl CheckFields for Line {
+    fn check_fields(&self, e: &mut RepErrors) {
         if self.x2 != self.y2 {
             e.add(String::from("self.x2 must equal self.y2"));
         }
     }
 }
+
+impl CheckRep for Line {}
 
 impl Line {
     #[ensure_rep]

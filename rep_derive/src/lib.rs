@@ -23,8 +23,8 @@ use syn::{
 /// - `#[rep(assert_le = 40)]`
 /// - `#[rep(assert_with = "has_valid_id")]`
 /// - `#[rep(check)]`
-#[proc_macro_derive(CheckRep, attributes(rep))]
-pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(CheckIndieFields, attributes(rep))]
+pub fn derive_check_indie_fields(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
@@ -34,7 +34,6 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let mut check_errors = vec![];
     let mut errors = vec![];
     let mut fields_to_recurse_on = vec![];
-    let mut use_custom = false;
 
     if let Data::Struct(data_struct) = data {
         let fields = data_struct.fields;
@@ -68,8 +67,6 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                                         Meta::Path(p) => {
                                             if p.is_ident("check") {
                                                 fields_to_recurse_on.push(field_name);
-                                            } else if p.is_ident("use_custom") {
-                                                use_custom = true;
                                             } else if p.is_ident("assert_default") {
                                                 checks.push(quote! {
                                                     {
@@ -231,31 +228,16 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 
     let expanded = if errors.len() > 0 {
         quote! {
-            impl rep::CheckRep for #name {
-                fn is_correct(&self) -> Result<(), Vec<String>> {
-                    Ok(())
-                }
-
-                fn check_rep(&self) {}
-            }
             #(#errors)*
         }
     } else {
-        let use_custom = if use_custom {
-            quote! {
-                self.collect_errors(e);
-            }
-        } else {
-            quote! {}
-        };
         quote! {
-            impl rep::CheckRep for #name {
-                fn correctness(&self, e: &mut RepErrors) {
+            impl rep::CheckIndieFields for #name {
+                fn check_indie_fields(&self, e: &mut RepErrors) {
                     #( if ! #checks { e.add( #check_errors ); } )*
                     #(
-                        let recursed = self. #fields_to_recurse_on .correctness(e);
+                        let recursed = self. #fields_to_recurse_on .check_indie_fields(e);
                     )*
-                    #use_custom
                 }
             }
         }

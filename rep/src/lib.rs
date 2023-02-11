@@ -8,14 +8,17 @@ pub use rep_derive::check_rep;
 pub use rep_derive::*;
 
 /// A trait for representation checking
-pub trait CheckRep {
+pub trait CheckIndieFields {
     /// Returns Ok if representation is correct, vector of errors otherwise
-    fn correctness(&self, e: &mut RepErrors);
+    fn check_indie_fields(&self, _e: &mut RepErrors) {}
+}
 
+pub trait CheckRep: CheckIndieFields + CheckFields {
     /// Asserts that self is correct
     fn check_rep(&self) {
         let mut errors = RepErrors::new();
-        self.correctness(&mut errors);
+        self.check_indie_fields(&mut errors);
+        self.check_fields(&mut errors);
         if errors.is_empty() {
             return;
         }
@@ -30,9 +33,9 @@ pub trait CheckRep {
 }
 
 /// A trait for adding extra rep-checking functionality to a data structure with `CheckRep` implemented
-pub trait CustomCheckRep {
+pub trait CheckFields {
     /// Returns Ok if representation is correct, vector of errors otherwise
-    fn collect_errors(&self, _e: &mut RepErrors) {}
+    fn check_fields(&self, _e: &mut RepErrors) {}
 }
 
 #[derive(Debug)]
