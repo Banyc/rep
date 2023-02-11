@@ -1,5 +1,4 @@
 use rep::*;
-#[macro_use]
 extern crate log;
 
 fn is_gt_zero(num: i32) -> bool {
@@ -15,7 +14,7 @@ struct Point {
 
 #[derive(CheckRep)]
 struct Line {
-	#[rep(use_custom)]
+    #[rep(use_custom)]
     // #[rep(assert_default)]
     // #[rep(assert_true)]
     // #[rep(assert_false)]
@@ -36,18 +35,11 @@ struct Line {
 }
 
 impl CustomCheckRep for Line {
-	fn c_correctness(&self) -> Result<(), Vec<String>> {
-		let mut errors = vec![];
-		if self.x2 != self.y2 {
-			errors.push(String::from("self.x2 must equal self.y2"));
-		}
-
-		if errors.len() == 0 {
-			Ok(())
-		} else {
-			Err(errors)
-		}
-	}
+    fn collect_errors(&self, e: &mut RepErrors) {
+        if self.x2 != self.y2 {
+            e.add(String::from("self.x2 must equal self.y2"));
+        }
+    }
 }
 
 impl Line {

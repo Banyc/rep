@@ -243,43 +243,19 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     } else {
         let use_custom = if use_custom {
             quote! {
-                if let Err(mut errors) = self.c_correctness() {
-                    c.append(&mut errors);
-                    is_error = true;
-                }
+                self.collect_errors(e);
             }
         } else {
             quote! {}
         };
         quote! {
             impl rep::CheckRep for #name {
-                fn is_correct(&self) -> bool {
-                    let mut is_correct = true;
-                    #( is_correct = is_correct && #checks ; )*
-                    #( is_correct = is_correct && self. #fields_to_recurse_on .is_correct() ; )*
-                    is_correct
-                }
-
-                fn correctness(&self) -> Result<(), Vec<String>> {
-                    let mut c = vec![];
-                    let mut is_error = false;
-                    #( if ! #checks { c.push( #check_errors ); } )*
-                    if c.len() > 0 {
-                        is_error = true;
-                    }
+                fn correctness(&self, e: &mut RepErrors) {
+                    #( if ! #checks { e.add( #check_errors ); } )*
                     #(
-                        let recursed = self. #fields_to_recurse_on .correctness();
-                        if let Err(mut errors) = recursed {
-                            c.append(&mut errors);
-                            is_error = true;
-                        }
+                        let recursed = self. #fields_to_recurse_on .correctness(e);
                     )*
                     #use_custom
-                    if is_error {
-                        Err(c)
-                    } else {
-                        Ok(())
-                    }
                 }
             }
         }
