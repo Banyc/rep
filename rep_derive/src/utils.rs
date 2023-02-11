@@ -104,9 +104,9 @@ fn wrap_checks(block: Block, option: CheckOption) -> Block {
         }
     };
 
-    let result_quote = check_rep_quote(option.prepend);
-    let prepend_quote = check_rep_quote(option.append);
-    let append_quote = if option.return_self {
+    let prepend_quote = check_rep_quote(option.prepend);
+    let append_quote = check_rep_quote(option.append);
+    let result_quote = if option.return_self {
         quote! {
             __result.check_rep();
         }

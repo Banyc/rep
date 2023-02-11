@@ -77,6 +77,15 @@ impl Line {
     }
 }
 
+#[ensure_rep]
+impl Line {
+    pub fn set_x1_2(&mut self, x1: i32) -> i32 {
+        let old = self.x1;
+        self.x1 = x1;
+        old
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,6 +106,19 @@ mod tests {
         };
 
         line.foo();
+    }
+
+    #[test]
+    fn test_ensure_rep_ok() {
+        let mut line = Line {
+            start: Point { x: 0, y: 0 },
+            x1: 0,
+            y1: 0,
+            x2: 0,
+            y2: 0,
+        };
+
+        line.set_x1_2(1);
     }
 
     #[test]
