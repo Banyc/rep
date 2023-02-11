@@ -3,11 +3,7 @@ use quote::quote;
 use syn::{Block, Error, FnArg, ImplItem, ImplItemMethod, ItemImpl, ReturnType, Visibility};
 
 pub fn error_quote(message: &str) -> TokenStream {
-    let error = Error::new(Span::call_site(), message).to_compile_error();
-
-    quote! {
-        #error
-    }
+    Error::new(Span::call_site(), message).to_compile_error()
 }
 
 pub fn wrap_checks_in_impl(
@@ -15,7 +11,7 @@ pub fn wrap_checks_in_impl(
     prepend: bool,
     append: bool,
     return_self: bool,
-) -> ItemImpl {
+) -> Result<ItemImpl, Error> {
     let mut new_impl_block = impl_block.clone();
     new_impl_block.items = vec![];
 
@@ -26,14 +22,14 @@ pub fn wrap_checks_in_impl(
         let mut new_impl_item = impl_item.clone();
 
         if let ImplItem::Method(method) = impl_item {
-            let new_method = wrap_checks_in_method(method, prepend, append, return_self);
+            let new_method = wrap_checks_in_method(method, prepend, append, return_self)?;
             new_impl_item = ImplItem::Method(new_method);
         }
 
         new_impl_block.items.push(new_impl_item);
     }
 
-    new_impl_block
+    Ok(new_impl_block)
 }
 
 pub fn wrap_checks_in_method(
@@ -41,7 +37,7 @@ pub fn wrap_checks_in_method(
     prepend: bool,
     append: bool,
     return_self: bool,
-) -> ImplItemMethod {
+) -> Result<ImplItemMethod, Error> {
     let mut new_method = method.clone();
 
     if let Visibility::Public(_) = method.vis {
@@ -82,13 +78,13 @@ pub fn wrap_checks_in_method(
                 append: append_,
                 return_self: return_self_,
             },
-        );
+        )?;
     }
 
-    new_method
+    Ok(new_method)
 }
 
-fn wrap_checks(block: Block, option: CheckOption) -> Block {
+fn wrap_checks(block: Block, option: CheckOption) -> Result<Block, Error> {
     let Block {
         brace_token: _,
         stmts,
@@ -127,10 +123,9 @@ fn wrap_checks(block: Block, option: CheckOption) -> Block {
             }
         }
         .into(),
-    )
-    .unwrap();
+    )?;
 
-    new_block
+    Ok(new_block)
 }
 
 struct CheckOption {
