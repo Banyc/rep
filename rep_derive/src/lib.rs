@@ -5,6 +5,7 @@ use quote::quote;
 use quote::ToTokens;
 use syn::spanned::Spanned;
 use syn::Block;
+use syn::ReturnType;
 use syn::{
     parse_macro_input, Data, DeriveInput, Error, Fields, FnArg, ImplItem, ImplItemMethod, ItemImpl,
     Lit, Meta, NestedMeta, Visibility,
@@ -260,12 +261,18 @@ pub fn check_rep(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     if let Ok(impl_block) = syn::parse::<ItemImpl>(item.clone().into()) {
-        wrap_checks_in_impl(impl_block, true, true)
+        wrap_checks_in_impl(impl_block, true, true, true)
             .to_token_stream()
             .into()
     } else if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.clone().into()) {
         // insert calls to check rep at start and end of method
-        impl_item_method.block = wrap_checks(impl_item_method.block, true, true);
+        impl_item_method.block = wrap_checks(
+            impl_item_method.block,
+            CheckOption::MutSelf {
+                prepend: true,
+                append: true,
+            },
+        );
 
         impl_item_method.to_token_stream().into()
     } else {
@@ -279,7 +286,12 @@ pub fn check_rep(
     }
 }
 
-fn wrap_checks_in_impl(impl_block: ItemImpl, prepend: bool, append: bool) -> ItemImpl {
+fn wrap_checks_in_impl(
+    impl_block: ItemImpl,
+    prepend: bool,
+    append: bool,
+    return_self: bool,
+) -> ItemImpl {
     let mut new_impl_block = impl_block.clone();
     new_impl_block.items = vec![];
 
@@ -292,8 +304,8 @@ fn wrap_checks_in_impl(impl_block: ItemImpl, prepend: bool, append: bool) -> Ite
         if let ImplItem::Method(impl_item_method) = impl_item.clone() {
             let mut new_impl_item_method = impl_item_method.clone();
 
-            if let Visibility::Public(_) = new_impl_item_method.vis {
-                if new_impl_item_method.sig.inputs.iter().any(|input| {
+            if let Visibility::Public(_) = impl_item_method.vis {
+                if impl_item_method.sig.inputs.iter().any(|input| {
                     if let FnArg::Receiver(receiver) = input {
                         receiver.mutability.is_some()
                     } else {
@@ -301,10 +313,32 @@ fn wrap_checks_in_impl(impl_block: ItemImpl, prepend: bool, append: bool) -> Ite
                     }
                 }) {
                     // replace the method's body with the new block
-                    new_impl_item_method.block =
-                        wrap_checks(impl_item_method.block, prepend, append);
+                    new_impl_item_method.block = wrap_checks(
+                        impl_item_method.block,
+                        CheckOption::MutSelf { prepend, append },
+                    );
 
                     new_impl_item = ImplItem::Method(new_impl_item_method);
+                } else if return_self {
+                    if let ReturnType::Type(_, ty) = impl_item_method.sig.output {
+                        if let syn::Type::Path(type_path) = ty.as_ref() {
+                            if type_path.path.segments.len() == 1 {
+                                if let Some(ident) =
+                                    type_path.path.segments.first().map(|s| s.ident.clone())
+                                {
+                                    if ident == "Self" {
+                                        // replace the method's body with the new block
+                                        new_impl_item_method.block = wrap_checks(
+                                            impl_item_method.block,
+                                            CheckOption::NewSelf,
+                                        );
+
+                                        new_impl_item = ImplItem::Method(new_impl_item_method);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -323,7 +357,13 @@ pub fn require_rep(
 ) -> proc_macro::TokenStream {
     if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.into()) {
         // insert calls to check rep at start of method
-        impl_item_method.block = wrap_checks(impl_item_method.block, true, false);
+        impl_item_method.block = wrap_checks(
+            impl_item_method.block,
+            CheckOption::MutSelf {
+                prepend: true,
+                append: false,
+            },
+        );
 
         impl_item_method.to_token_stream().into()
     } else {
@@ -344,7 +384,13 @@ pub fn ensure_rep(
 ) -> proc_macro::TokenStream {
     if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.into()) {
         // insert calls to check rep at end of method
-        impl_item_method.block = wrap_checks(impl_item_method.block, false, true);
+        impl_item_method.block = wrap_checks(
+            impl_item_method.block,
+            CheckOption::MutSelf {
+                prepend: false,
+                append: true,
+            },
+        );
 
         impl_item_method.to_token_stream().into()
     } else {
@@ -357,7 +403,7 @@ pub fn ensure_rep(
     }
 }
 
-fn wrap_checks(block: Block, prepend: bool, append: bool) -> Block {
+fn wrap_checks(block: Block, option: CheckOption) -> Block {
     let Block {
         brace_token: _,
         stmts,
@@ -373,17 +419,31 @@ fn wrap_checks(block: Block, prepend: bool, append: bool) -> Block {
         }
     };
 
-    let prepend = check_rep_quote(prepend);
-    let append = check_rep_quote(append);
+    let mut result_quote = quote! {};
+    let mut prepend_quote = quote! {};
+    let mut append_quote = quote! {};
+
+    match option {
+        CheckOption::MutSelf { prepend, append } => {
+            prepend_quote = check_rep_quote(prepend);
+            append_quote = check_rep_quote(append);
+        }
+        CheckOption::NewSelf => {
+            result_quote = quote! {
+                __result.check_rep();
+            };
+        }
+    }
 
     let new_block = syn::parse::<Block>(
         quote! {
             {
-                #prepend
+                #prepend_quote
                 let __result = (|| {
                     #(#stmts)*
                 })();
-                #append
+                #append_quote
+                #result_quote
                 __result
             }
         }
@@ -392,4 +452,9 @@ fn wrap_checks(block: Block, prepend: bool, append: bool) -> Block {
     .unwrap();
 
     new_block
+}
+
+enum CheckOption {
+    MutSelf { prepend: bool, append: bool },
+    NewSelf,
 }

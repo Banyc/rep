@@ -111,28 +111,39 @@ By default, if a logger is present invariant violation will be logged instead of
 
 ## Examples
 
-`#[check_rep]` macro automatically inserts calls to `check_rep` at start and end of all methods that are `pub` and mutate `&mut self`:
+`#[check_rep]` macro automatically inserts `check_rep()` calls to:
+
+- the start and end of all methods that are `pub` and mutate `&mut self`
+- the return value of all methods that are `pub` and return `Self`
+  - note: only the token `Self` is recognized, so returning `Line` doesn't count
 
 ```rust
-#[check_rep] // <-- this inserts calls to `check_rep` at the start and the end of `move_by`
+// The comments represent code that is inserted by #[check_rep]
+#[check_rep]
 impl Line {
     pub fn new() -> Self {
-        let new_line = Self {
-            x1: -1,
-            y1: -1,
-            x1: 1,
-            y1: 1
-        };
-
-        new_line.check_rep();
-        new_line
+        // let __result = (|| {
+            Self {
+                x1: -1,
+                y1: -1,
+                x1: 1,
+                y1: 1
+            }
+        // })();
+        // __result.check_rep();
+        // __result
     }
 
     pub fn move_by(&mut self, x: i32, y: i32) {
-        self.x1 += x;
-        self.x2 += x;
-        self.y1 += y;
-        self.y2 += y;
+        // self.check_rep();
+        // let __result = (|| {
+            self.x1 += x;
+            self.x2 += x;
+            self.y1 += y;
+            self.y2 += y;
+        // })();
+        // self.check_rep();
+        // __result
     }
 }
 ```
