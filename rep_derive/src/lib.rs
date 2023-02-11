@@ -57,10 +57,7 @@ pub fn derive_check_indie_fields(input: proc_macro::TokenStream) -> proc_macro::
                                         &mut fields_to_recurse_on,
                                     );
                                 } else {
-                                    errors.push(
-                                        Error::new(meta.span(), "invalid usage of #[rep]")
-                                            .to_compile_error(),
-                                    );
+                                    errors.push(Error::new(meta.span(), "invalid usage of #[rep]"));
                                 }
                             }
                         }
@@ -69,7 +66,7 @@ pub fn derive_check_indie_fields(input: proc_macro::TokenStream) -> proc_macro::
             }
         }
     } else {
-        errors.push(Error::new(name.span(), "expected name of structure").to_compile_error());
+        errors.push(Error::new(name.span(), "expected name of structure"));
     }
 
     let expanded = match errors.is_empty() {
@@ -86,6 +83,7 @@ pub fn derive_check_indie_fields(input: proc_macro::TokenStream) -> proc_macro::
             }
         }
         false => {
+            let errors = errors.into_iter().map(|e| e.to_compile_error());
             quote! {
                 #(#errors)*
             }

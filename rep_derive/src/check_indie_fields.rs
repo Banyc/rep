@@ -7,11 +7,11 @@ pub fn check_indie_fields(
     field: &Field,
     check_conditions: &mut Vec<TokenStream>,
     check_errors: &mut Vec<TokenStream>,
-    errors: &mut Vec<TokenStream>,
+    errors: &mut Vec<Error>,
     fields_to_recurse_on: &mut Vec<syn::Ident>,
 ) {
     let Some(field_ident) = &field.ident else {
-        errors.push(Error::new(field.span(), "expected named fields").to_compile_error());
+        errors.push(Error::new(field.span(), "expected named fields"));
         return;
     };
     let field_ident_str = field_ident.to_string();
@@ -49,9 +49,7 @@ pub fn check_indie_fields(
                     format!("self.{} must be false", #field_ident_str)
                 });
             } else {
-                errors.push(
-                    Error::new(p.span(), "unsupported representation invariant").to_compile_error(),
-                );
+                errors.push(Error::new(p.span(), "unsupported representation invariant"));
             }
         }
         Meta::NameValue(v) => {
@@ -129,33 +127,26 @@ pub fn check_indie_fields(
                             format!("{}(self.{}) must be true when self.{} == {}", #fn_name, #field_ident_str, #field_ident_str, self.#field_ident)
                         });
                     } else {
-                        errors.push(
-                            Error::new(
-                                val.span(),
-                                "assert_with can only be used with the name of a function to call",
-                            )
-                            .to_compile_error(),
-                        );
-                    }
-                } else {
-                    errors.push(
-                        Error::new(
+                        errors.push(Error::new(
                             val.span(),
                             "assert_with can only be used with the name of a function to call",
-                        )
-                        .to_compile_error(),
-                    );
+                        ));
+                    }
+                } else {
+                    errors.push(Error::new(
+                        val.span(),
+                        "assert_with can only be used with the name of a function to call",
+                    ));
                 }
             } else {
-                errors.push(
-                    Error::new(v.span(), "unsupported representation invariant").to_compile_error(),
-                );
+                errors.push(Error::new(v.span(), "unsupported representation invariant"));
             }
         }
         _ => {
-            errors.push(
-                Error::new(meta.span(), "unsupported representation invariant").to_compile_error(),
-            );
+            errors.push(Error::new(
+                meta.span(),
+                "unsupported representation invariant",
+            ));
         }
     }
 }
