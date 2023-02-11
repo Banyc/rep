@@ -1,8 +1,8 @@
 mod check_indie_fields;
-mod utils;
+mod check_rep;
 
 use check_indie_fields::*;
-use utils::*;
+use check_rep::*;
 
 extern crate proc_macro;
 
