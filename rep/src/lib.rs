@@ -7,9 +7,9 @@ pub use log::{error, log_enabled};
 pub use rep_derive::check_rep;
 pub use rep_derive::*;
 
-/// A trait for representation checking
+/// A trait for checking invariants on independent fields of a `struct`
 pub trait CheckIndieFields {
-    /// Returns Ok if representation is correct, vector of errors otherwise
+    /// Append any errors to `e`
     fn check_indie_fields(&self, _e: &mut RepErrors) {}
 }
 
@@ -32,9 +32,9 @@ pub trait CheckRep: CheckIndieFields + CheckFields {
     }
 }
 
-/// A trait for adding extra rep-checking functionality to a data structure with `CheckRep` implemented
+/// A trait for checking invariants on interrelated fields of a `struct`
 pub trait CheckFields {
-    /// Returns Ok if representation is correct, vector of errors otherwise
+    /// Append any errors to `e`
     fn check_fields(&self, _e: &mut RepErrors) {}
 }
 
