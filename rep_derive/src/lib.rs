@@ -330,7 +330,9 @@ pub fn check_rep(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     if let Ok(impl_block) = syn::parse::<ItemImpl>(item.clone().into()) {
-        check_rep_at_impl(impl_block).to_token_stream().into()
+        wrap_checks_in_impl(impl_block, true, true)
+            .to_token_stream()
+            .into()
     } else if let Ok(mut impl_item_method) = syn::parse::<ImplItemMethod>(item.clone().into()) {
         // insert calls to check rep at start and end of method
         impl_item_method.block = wrap_checks(impl_item_method.block, true, true);
@@ -347,7 +349,7 @@ pub fn check_rep(
     }
 }
 
-fn check_rep_at_impl(impl_block: ItemImpl) -> ItemImpl {
+fn wrap_checks_in_impl(impl_block: ItemImpl, prepend: bool, append: bool) -> ItemImpl {
     let mut new_impl_block = impl_block.clone();
     new_impl_block.items = vec![];
 
@@ -369,7 +371,8 @@ fn check_rep_at_impl(impl_block: ItemImpl) -> ItemImpl {
                     }
                 }) {
                     // replace the method's body with the new block
-                    new_impl_item_method.block = wrap_checks(impl_item_method.block, true, true);
+                    new_impl_item_method.block =
+                        wrap_checks(impl_item_method.block, prepend, append);
 
                     new_impl_item = ImplItem::Method(new_impl_item_method);
                 }
