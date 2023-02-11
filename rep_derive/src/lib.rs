@@ -241,72 +241,44 @@ pub fn derive_check_rep(input: proc_macro::TokenStream) -> proc_macro::TokenStre
             #(#errors)*
         }
     } else {
-        if use_custom {
+        let use_custom = if use_custom {
             quote! {
-                impl rep::CheckRep for #name {
-                    fn is_correct(&self) -> bool {
-                        let mut is_correct = true;
-                        #( is_correct = is_correct && #checks ; )*
-                        #( is_correct = is_correct && self. #fields_to_recurse_on .is_correct() ; )*
-                        is_correct
-                    }
-
-                    fn correctness(&self) -> Result<(), Vec<String>> {
-                        let mut c = vec![];
-                        let mut is_error = false;
-                        #( if ! #checks { c.push( #check_errors ); } )*
-                        if c.len() > 0 {
-                            is_error = true;
-                        }
-                        #(
-                            let recursed = self. #fields_to_recurse_on .correctness();
-                            if let Err(mut errors) = recursed {
-                                c.append(&mut errors);
-                                is_error = true;
-                            }
-                        )*
-                        let custom_check = self.c_correctness();
-                        if let Err(mut errors) = custom_check {
-                            c.append(&mut errors);
-                            is_error = true;
-                        }
-                        if is_error {
-                            Err(c)
-                        } else {
-                            Ok(())
-                        }
-                    }
+                if let Err(mut errors) = self.c_correctness() {
+                    c.append(&mut errors);
+                    is_error = true;
                 }
             }
         } else {
-            quote! {
-                impl rep::CheckRep for #name {
-                    fn is_correct(&self) -> bool {
-                        let mut is_correct = true;
-                        #( is_correct = is_correct && #checks ; )*
-                        #( is_correct = is_correct && self. #fields_to_recurse_on .is_correct() ; )*
-                        is_correct
-                    }
+            quote! {}
+        };
+        quote! {
+            impl rep::CheckRep for #name {
+                fn is_correct(&self) -> bool {
+                    let mut is_correct = true;
+                    #( is_correct = is_correct && #checks ; )*
+                    #( is_correct = is_correct && self. #fields_to_recurse_on .is_correct() ; )*
+                    is_correct
+                }
 
-                    fn correctness(&self) -> Result<(), Vec<String>> {
-                        let mut c = vec![];
-                        let mut is_error = false;
-                        #( if ! #checks { c.push( #check_errors ); } )*
-                        if c.len() > 0 {
+                fn correctness(&self) -> Result<(), Vec<String>> {
+                    let mut c = vec![];
+                    let mut is_error = false;
+                    #( if ! #checks { c.push( #check_errors ); } )*
+                    if c.len() > 0 {
+                        is_error = true;
+                    }
+                    #(
+                        let recursed = self. #fields_to_recurse_on .correctness();
+                        if let Err(mut errors) = recursed {
+                            c.append(&mut errors);
                             is_error = true;
                         }
-                        #(
-                            let recursed = self. #fields_to_recurse_on .correctness();
-                            if let Err(mut errors) = recursed {
-                                c.append(&mut errors);
-                                is_error = true;
-                            }
-                        )*
-                        if is_error {
-                            Err(c)
-                        } else {
-                            Ok(())
-                        }
+                    )*
+                    #use_custom
+                    if is_error {
+                        Err(c)
+                    } else {
+                        Ok(())
                     }
                 }
             }
