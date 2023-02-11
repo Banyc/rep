@@ -134,7 +134,7 @@ impl CheckRep for Player {
 }
 ```
 
-Once `CheckRep` is implemented, you may use it with the `#[check_rep`, `#[require_rep`, and `#[check_rep` macros.
+Once `CheckRep` is implemented, you may use it with the `#[check_rep]`, `#[require_rep]`, and `#[check_rep]` macros.
 ```rust
 // this adds `check_rep` at start and end of all public mutating methods
 #[check_rep]
@@ -157,7 +157,7 @@ If a logger is present invariant violation will be logged instead of panicked.
 Just add the following to your `Cargo.toml` file.
 ```toml
 [dependencies]
-rep = "0.3.0"
+rep = { git = "<git url>" }
 ```
 
 Then, in your module.

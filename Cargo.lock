@@ -126,23 +126,12 @@ name = "rep"
 version = "0.3.0"
 dependencies = [
  "log",
- "rep_derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rep_derive",
 ]
 
 [[package]]
 name = "rep_derive"
 version = "0.3.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "rep_derive"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "711646319f6795048c46f13bab073e90ede3bb2d9283deec4540831c1af1cd3f"
 dependencies = [
  "proc-macro2",
  "quote",
