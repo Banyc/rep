@@ -95,7 +95,7 @@ pub fn derive_check_indie_fields(input: proc_macro::TokenStream) -> proc_macro::
 ///
 /// This macro can be applied to an `impl` block to inserts calls to `check_rep` only in methods that satisfy the following:
 ///
-/// - Visibility is `pub` and either:
+/// - Visibility is `pub`, no `async` is at the function signature, and either:
 ///   - parameters include `&mut self`
 ///   - the return type is `Self`
 ///

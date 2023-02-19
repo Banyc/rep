@@ -86,6 +86,10 @@ fn wrap_checks_in_fn(
     let Visibility::Public(_) = vis else {
         return Ok(None);
     };
+    if sig.asyncness.is_some() {
+        // TODO: support async
+        return Ok(None);
+    }
 
     let (prepend_, append_) = if sig.inputs.iter().any(|input| {
         if let FnArg::Receiver(receiver) = input {
